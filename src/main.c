@@ -29,6 +29,7 @@
 #include <zephyr/settings/settings.h>
 
 #include <zephyr/drivers/uart.h>
+//#include <zephyr/drivers/usb/uhc.h>
 
 #include <zephyr/logging/log.h>
 
@@ -50,6 +51,8 @@ static struct k_work_delayable uart_work;
 
 K_SEM_DEFINE(nus_write_sem, 0, 1);
 
+static const struct device *hdev;
+
 struct uart_data_t {
 	void *fifo_reserved;
 	uint8_t  data[UART_BUF_SIZE];
@@ -61,6 +64,33 @@ static K_FIFO_DEFINE(fifo_uart_rx_data);
 
 static struct bt_conn *default_conn;
 static struct bt_nus_client nus_client;
+
+const char init_string[] = "\n Connected to ANTSHIV Robotics Base Wireless Station\r"
+							"\n\n To start motor enter [motor addr] + speed in duty cycle.\r"
+							"\n To start sensor reading stream enter [sensor addr]. To stop sensor enter 0x0f \n\r"
+							"\n\t 0x01 -> Hard Stop\r"
+							"\n\t 0x02 -> Fetch All Raw readings\r"
+							"\n\t 0x03 -> Fetch gyro readings\r"
+							"\n\t 0x04 -> Fetch Accel readings\r"
+							"\n\t 0x3f -> [63]-> Test Mode ON\r"
+							"\n\t 0x05 -> Test Motor 1 + Real Duty Cycle - 4(0) - 10(100%)\r"
+							"\n\t 0x06 -> Test Motor 2 + Real Duty Cycle - 4(0) - 10(100%)\r"
+							"\n\t 0x07 -> Test Motor 3 + Real Duty Cycle - 4(0) - 10(100%)\r"
+							"\n\t 0x08 -> Test Motor 4 + Real Duty Cycle - 4(0) - 10(100%)\r"
+							"\n\t 0x4f -> [79] -Test Mode OFF\r"
+							"\n\t 0x09 -> Hover\r"
+							"\n\t 0x0a -> Move Right\r"
+							"\n\t 0x0b -> Move Left\r"
+							"\n\t 0x0c -> Move Forward\r"
+							"\n\t 0x0d -> Move Back\r"
+							"\n\t 0x0e -> Lower down\r"
+							"\n\t 0x0f -> Stop sensor stream\r"
+							"\n\t 0x10 -> Motor 1 + Duty Cycle (0 - 100%)\r"
+							"\n\t 0x11 -> Motor 2 + Duty Cycle (0 - 100%)\r"
+							"\n\t 0x12 -> Motor 3 + Duty Cycle (0 - 100%)\r"
+							"\n\t 0x13 -> Motor 4 + Duty Cycle (0 - 100%)\r"
+							"\n\t 0x1f -> Set PWM Frequency - Prescalar\r"
+							"\n\t 0x2f -> Toggle Logging ON/OFF \r";
 
 static void ble_data_sent(struct bt_nus_client *nus, uint8_t err,
 					const uint8_t *const data, uint16_t len)
@@ -554,6 +584,10 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 	.pairing_failed = pairing_failed
 };
 
+void hid_init() {
+//	printk("HID init\n");
+}
+
 void main(void)
 {
 	int err;
@@ -590,6 +624,7 @@ void main(void)
 	}
 
 	printk("Starting Bluetooth Central UART example\n");
+	printk("%s\n", init_string);
 
 
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
@@ -599,6 +634,9 @@ void main(void)
 	}
 
 	LOG_INF("Scanning successfully started");
+
+	/* initialize USB */
+	//uhc_init(hdev, hid_init);
 
 	for (;;) {
 		/* Wait indefinitely for data to be sent over Bluetooth */
